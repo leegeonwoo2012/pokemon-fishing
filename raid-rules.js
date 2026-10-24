@@ -33,28 +33,16 @@ window.RaidRules=(()=>{
     17:[["깨물어부수기",80,"physical"],["악의파동",80,"special"]],
     18:[["치근거리기",90,"physical"],["문포스",95,"special"]]
   };
-  const tierHp={common:62,uncommon:92,rare:175,legendary:390,mythic:650};
-  const tierAtk={common:35,uncommon:58,rare:87,legendary:130,mythic:184};
-  const tierInterval={common:1.16,uncommon:1.05,rare:.93,legendary:.8,mythic:.72};
-  const biomeType={sea:[11],cave:[5,6],lava:[10],mercury:[9],glacier:[15],meadow:[12,7],dream:[14,18],storm:[13,3],shadow:[8,17],martial:[2,1],dragon:[16,3],venom:[4]};
-  function typesFor(p){return window.POKEMON_TYPES?.[p.id]||biomeType[p.biome]||[1];}
-  const formTypes={palkiaOrigin:[11,16],zygardeComplete:[16,5],groudonPrimal:[5,10],
-    diancieMega:[6,18],zacianCrowned:[18,9],zamazentaCrowned:[2,9],
-    necrozmaDusk:[14,9],necrozmaDawn:[14,8],kyuremBlack:[16,15],
-    kyuremWhite:[16,15],shayminSky:[12,3],hoopaUnbound:[14,17],ultraNecrozma:[14,16]};
   function profile(p,shiny=false,formKey=null){
     const form=window.SPECIAL_FORMS?.[formKey];
-    const tier=form?.combatTier||(form?"mythic":p.tier);
-    const types=form?.types||formTypes[formKey]||typesFor(p),xp=window.POKEMON_EXP?.[p.id]||120;
+    const types=form?.types||formTypes[formKey]||typesFor(p);
     const base=form?.stats||window.POKEMON_STATS?.[p.id]||[70,70,70,70,70,70];
-    const hp=Math.round((tierHp[tier]+base[0]*.8+xp*.15)*(shiny?1.2:1)*(form?.raidVitality||1));
-    const attack=Math.round((tierAtk[tier]+base[1]*.18+xp*.03)*(shiny?1.2:1)*(form?.raidPower||1));
-    const special=Math.round((tierAtk[tier]+base[3]*.18+xp*.03)*(shiny?1.2:1)*(form?.raidPower||1));
-    const defense=Math.round(50+(form?(base[2]+base[4])*.25:base[2]*.5)+xp*.05);
+    // Raid combat uses the canonical base stats (HP/Atk/Def/SpA/SpD/Spe).
+    // Rarity, shiny status, and form labels do not add hidden combat bonuses.
+    const hp=base[0],attack=base[1],defense=base[2],special=base[3],specialDefense=base[4];
     const moveset=types.flatMap(type=>moves[type].map(([name,power,category])=>({name,power,category,type})));
-    return {types,hp,attack,special,defense,interval:Math.max(.6,tierInterval[tier]-(base[5]-80)*.00045),moves:moveset};
-  }
-  function effectiveness(type,targetTypes){
+    return {types,hp,attack,special,defense,specialDefense,interval:Math.max(.6,2.2-base[5]*.009),moves:moveset};
+  }  function effectiveness(type,targetTypes){
     return targetTypes.reduce((n,target)=>{
       const row=chart[type];return n*(row.zero?.includes(target)?0:row.strong?.includes(target)?2:row.weak?.includes(target)?.5:1);
     },1);
@@ -72,8 +60,11 @@ window.RaidRules=(()=>{
   function damage(attacker,defender,move,random=1){
     if(move.effectiveness===0)return 0;
     const stat=move.category==="physical"?attacker.attack:attacker.special;
-    return Math.max(1,Math.round(stat*move.power/100*.39*1.2*move.effectiveness*random*(100/(75+defender.defense*.2))));
+    return Math.max(1,Math.round(stat*move.power/100*.12*1.2*move.effectiveness*random*(100/(75+((move.category==="physical"?defender.defense:defender.specialDefense)||defender.defense)*.2))));
   }
   const typeName=id=>names[id]||"???";
   return {profile,bestMove,damage,effectiveness,typeName,typesFor};
 })();
+
+
+
