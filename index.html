@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#071d2d">
+  <meta name="description" content="도트 바이옴에서 포켓몬을 낚고, 이로치를 찾고, 낚싯대를 업그레이드하세요.">
+  <title>TIDEBOUND · 포켓몬 낚시 모험</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Gowun+Dodum&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true"><span></span></div>
+        <div><div class="brand-kicker">PIXEL BIOME ADVENTURE</div><h1>TIDE<span>BOUND</span></h1></div>
+      </div>
+      <div class="header-right">
+        <div class="top-stat money-stat"><span class="stat-icon">✦</span><div><small>보유 코인</small><strong id="money">0</strong></div></div>
+        <div class="top-stat catches-stat"><span class="stat-icon fish-icon">◈</span><div><small>낚은 포켓몬</small><strong id="totalCatches">0</strong></div></div>
+        <button class="icon-button" id="soundButton" aria-label="소리 켜기 또는 끄기" title="소리 켜기 또는 끄기">♪</button>
+      </div>
+    </header>
+
+    <main class="main-grid">
+      <section class="game-column" aria-label="낚시 게임">
+        <div class="section-caption"><span class="green-dot"></span> NOW FISHING <span class="caption-line"></span> <span class="region-name" id="regionName">푸른해역 · 001</span></div>
+        <div class="biome-strip" id="biomeStrip" aria-label="바이옴 선택"></div>
+        <div class="scene-frame" id="sceneFrame">
+          <div class="scene-topline"><span id="sceneWeather">☼ 맑은 바다</span><span id="sceneStatus" aria-live="polite">낚싯대를 던져보세요!</span></div>
+          <canvas id="seaCanvas" width="480" height="264" aria-label="현재 바이옴의 도트 낚시 풍경"></canvas>
+          <div class="scene-bottomline"><span id="sceneBottomLeft">◂ SHORELINE</span><span id="sceneBottomRight">WAVE 01 ▸</span></div>
+        </div>
+
+        <section class="hook-panel pixel-panel hidden" id="hookPanel" aria-label="낚아채기 타이밍">
+          <div class="hook-top"><span class="hook-alert">⚡ 입질이다!</span><span id="hookHint">움직이는 바늘이 빨간 중앙에 들어왔을 때 멈추세요</span></div>
+          <div class="hook-gauge" id="hookGauge" role="button" tabindex="0" aria-label="타이밍 바. 표시가 중앙의 빨간 영역에 왔을 때 눌러 낚아채기">
+            <div class="hook-segments" aria-hidden="true"></div>
+            <div class="hook-target" id="hookTarget" aria-hidden="true"><span></span></div>
+            <div class="hook-cursor" id="hookCursor" aria-hidden="true"></div>
+          </div>
+          <div class="hook-bottom"><small>← &nbsp;빠르게 움직이는 표시를 중앙에!</small><button id="hookButton" class="hook-button">SPACE / 클릭으로 낚아채기</button></div>
+        </section>
+
+        <div class="fishing-panel pixel-panel">
+          <div class="rod-summary">
+            <div class="rod-badge" id="rodBadge"><div id="rodMiniArt"></div></div>
+            <div><small>장착한 낚싯대</small><strong id="rodName">초보자의 낚싯대</strong><span id="rodFlavor">바다의 첫 만남을 위한 낚싯대</span></div>
+          </div>
+          <div class="cast-side"><span class="cast-hint">SPACE = 던지기 / 낚아채기</span><button class="cast-button" id="castButton"><span>✦</span> 낚싯대 던지기 <span>↗</span></button></div>
+        </div>
+
+        <div class="below-game">
+          <section class="latest-card pixel-panel" aria-label="최근 낚은 포켓몬">
+            <div class="panel-heading"><span>최근 낚은 포켓몬</span><small>LAST CATCH</small></div>
+            <div id="lastCatch" class="empty-last"><span class="empty-fish">◁°))))><</span><span>아직 낚은 포켓몬이 없어요.<br>낚싯대를 던져 탐험해보세요!</span></div>
+          </section>
+          <section class="odds-card pixel-panel" aria-label="현재 낚싯대의 출현 확률">
+            <div class="panel-heading"><span>현재 출현 확률</span><small>ENCOUNTER RATE</small></div>
+            <div id="oddsList" class="odds-list"></div>
+          </section>
+        </div>
+      </section>
+
+      <aside class="sidebar pixel-panel">
+        <div class="sidebar-head"><div><small>THE FISHER'S LOG</small><h2>나의 항해 기록</h2></div><span class="book-mark">✦</span></div>
+        <div class="biome-progress" id="biomeProgress"></div>
+        <div class="raid-gate hidden" id="raidGate"><span id="raidGateText"></span><button id="raidEnterButton" class="primary-button">레이드방 입장 ↗</button></div>
+        <div class="tabs" role="tablist" aria-label="가방, 도감, 상점">
+          <button class="tab active" role="tab" aria-selected="true" data-tab="bag">가방 <span id="bagCount">0</span></button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="dex">도감 <span id="dexCount">0</span></button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="shop">상점</button>
+        </div>
+        <div class="tab-content" id="tabContent"></div>
+      </aside>
+    </main>
+
+    <footer class="footer"><span>✦ &nbsp;일반 400~1,000 · 중간 1,001~5,000 · 희귀 5,000~20,000 · 준전설 10만~20만 · 초전설 100만~200만 · 이로치 10배</span><span>v1.0 · 브라우저에 자동 저장 · <a href="https://github.com/PokeAPI/sprites" target="_blank" rel="noopener noreferrer">Sprite source</a></span></footer>
+  </div>
+
+  <div class="catch-overlay hidden" id="catchOverlay" role="dialog" aria-modal="true" aria-labelledby="catchTitle">
+    <div class="catch-modal pixel-panel">
+      <div class="modal-stars" id="modalStars">✦ &nbsp; ✧ &nbsp; ✦</div>
+      <small class="modal-kicker" id="modalKicker">A NEW CATCH!</small>
+      <h2 id="catchTitle">낚시 성공!</h2>
+      <div class="catch-sprite-wrap" id="catchSpriteWrap"><img id="catchSprite" alt=""></div>
+      <div id="catchInfo"></div>
+      <div class="swap-panel hidden" id="swapPanel"></div>
+      <div class="modal-actions"><button id="keepButton" class="secondary-button">가방에 보관</button><button id="sellCatchButton" class="primary-button">바로 판매</button></div>
+      <span class="modal-note" id="catchChoiceNote">가방은 최대 5마리이며, 보관한 포켓몬이 레이드에서 자동 전투합니다.</span>
+    </div>
+  </div>
+
+  <div class="catch-overlay hidden" id="unlockOverlay" role="dialog" aria-modal="true" aria-labelledby="unlockTitle">
+    <div class="unlock-modal pixel-panel">
+      <div class="unlock-rays">✦ &nbsp; ✧ &nbsp; ✦</div>
+      <div class="unlock-icon" id="unlockIcon">💎</div>
+      <small>NEW BIOME UNLOCKED</small>
+      <h2 id="unlockTitle">새로운 바이옴 개방!</h2>
+      <p id="unlockDescription"></p>
+      <button class="primary-button" id="unlockButton">새로운 지역으로 이동하기 ↗</button>
+    </div>
+  </div>
+  <div class="raid-overlay hidden" id="raidOverlay" role="dialog" aria-modal="true" aria-labelledby="raidTitle">
+    <div class="raid-room pixel-panel">
+      <div class="raid-room-head"><small>BIOME RAID · AUTO BATTLE</small><h2 id="raidTitle">레이드방</h2><p id="raidSubtitle"></p></div>
+      <canvas id="raidCanvas" width="640" height="300" aria-label="포켓몬이 움직이며 기술을 사용하는 도트 레이드 전장"></canvas>
+      <div class="raid-arena">
+        <div class="raid-boss"><div class="raid-boss-aura"><img id="raidBossSprite" alt=""></div><strong id="raidBossName"></strong><div class="raid-hp"><span id="raidBossHpBar"></span></div><small id="raidBossHpText"></small></div>
+        <div class="raid-party" id="raidParty"></div>
+      </div>
+      <div class="raid-log" id="raidLog" aria-live="polite">가방에서 최대 5마리가 함께 싸웁니다.</div>
+      <div class="raid-actions"><button id="raidStartButton" class="primary-button">자동 배틀 시작</button><button id="raidExitButton" class="secondary-button">레이드방 나가기</button></div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="./data.js" defer></script>
+  <script src="./battle-data.js" defer></script>
+  <script src="./raid-rules.js" defer></script>
+  <script src="./raid-scene.js" defer></script>
+  <script src="./game.js" defer></script>
+</body>
+</html>
+
+
