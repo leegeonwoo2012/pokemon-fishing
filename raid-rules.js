@@ -35,11 +35,12 @@ window.RaidRules=(()=>{
   };
   const biomeType={sea:[11],cave:[5,6],lava:[10],mercury:[9],glacier:[15],meadow:[12,7],dream:[14,18],storm:[13,3],shadow:[8,17],martial:[2,1],dragon:[16,3],venom:[4]};
   const formTypes={palkiaOrigin:[11,16],zygardeComplete:[16,5],groudonPrimal:[5,10],diancieMega:[6,18],zacianCrowned:[18,9],zamazentaCrowned:[2,9],necrozmaDusk:[14,9],necrozmaDawn:[14,8],kyuremBlack:[16,15],kyuremWhite:[16,15],shayminSky:[12,3],hoopaUnbound:[14,17],ultraNecrozma:[14,16]};
-  function typesFor(p){return window.POKEMON_TYPES?.[p.id]||biomeType[p.biome]||[1];}
+  function typesFor(p){const types=window.POKEMON_TYPES?.[p.id]; if(!types)throw new Error("Missing Pokémon types: "+p.id); return types;}
   function profile(p,shiny=false,formKey=null){
     const form=window.SPECIAL_FORMS?.[formKey];
     const types=form?.types||formTypes[formKey]||typesFor(p);
-    const base=form?.stats||window.POKEMON_STATS?.[p.id]||[70,70,70,70,70,70];
+    const base=form?.stats||window.POKEMON_STATS?.[p.id];
+    if(!base)throw new Error("Missing Pokémon stats: "+p.id);
     // Raid combat uses the canonical base stats (HP/Atk/Def/SpA/SpD/Spe).
     // Rarity, shiny status, and form labels do not add hidden combat bonuses.
     const hp=base[0],attack=base[1],defense=base[2],special=base[3],specialDefense=base[4];
@@ -56,7 +57,7 @@ window.RaidRules=(()=>{
     for(const move of attacker.moves){
       const stat=move.category==="physical"?attacker.attack:attacker.special;
       const eff=effectiveness(move.type,defender.types);
-      const value=stat*move.power/100*eff;
+      const value=damage(attacker,defender,{...move,effectiveness:eff});
       if(value>score){score=value;best={...move,effectiveness:eff,score:value};}
     }
     return best;
@@ -69,9 +70,3 @@ window.RaidRules=(()=>{
   const typeName=id=>names[id]||"???";
   return {profile,bestMove,damage,effectiveness,typeName,typesFor};
 })();
-
-
-
-
-
-

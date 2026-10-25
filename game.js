@@ -393,8 +393,8 @@ const RAID_STATS = {
   mythic:{hp:500,attack:75,interval:.7,move:"초월의 힘"}
 };
 const RAID_ELEMENTS = {sea:"파도",cave:"대지",lava:"화염",mercury:"강철",glacier:"빙결",meadow:"숲",dream:"꿈",storm:"뇌격",shadow:"그림자",martial:"투혼",dragon:"용성",venom:"맹독"};
-const RAID_HP=[0,1050,1450,1900,2400,3500,4500,4700,5600,7500,8500];
-const RAID_AOE=[0,20,25,31,38,65,70,78,88,98,55];
+const RAID_HP=[0,120,180,260,360,500,600,720,860,1000,1250];
+const RAID_AOE=[0,3,4,5,6,7,7,8,8,9,9];
 const raidReward=stage=>stage===10?2000000:stage*10000;
 const elementBiome=type=>({5:"cave",6:"cave",9:"mercury",10:"lava",11:"sea",12:"meadow",7:"meadow",14:"dream",18:"dream",15:"glacier",1:"martial",2:"martial",3:"storm",4:"venom",8:"shadow",13:"storm",16:"dragon",17:"shadow"})[type]||"dream";
 function nextRaidStage(biomeId) {
@@ -431,7 +431,7 @@ function openRaid() {
   if(stage===null)return;
   const boss=raidBoss(state.biome,stage);
   const hp=RAID_HP[stage],rules=window.RaidRules;
-  const bossProfile=rules?.profile(BY_ID.get(boss.id),false);
+  const bossProfile=rules.profile(BY_ID.get(boss.id),false);
   activeRaid={biome:state.biome,stage,boss,bossHp:hp,bossMaxHp:hp,bossAttack:RAID_AOE[stage],bossProfile,
     party:state.bag.slice(0,5).map((item,index)=>{
       const p=BY_ID.get(item.id),base=RAID_STATS[p.tier],bonus=item.shiny?1.2:1;
@@ -512,7 +512,7 @@ function raidTick() {
     const move=rules&&fighter.profile&&raid.bossProfile?rules.bestMove(fighter.profile,raid.bossProfile):null;
     let damage=move?rules.damage(fighter.profile,raid.bossProfile,move,.9+randomUnit()*.2):Math.max(1,Math.round(fighter.attack*(.85+randomUnit()*.3)));
     raid.bossHp=Math.max(0,raid.bossHp-damage);
-    raidScene?.attack(index,-1,move?elementBiome(move.type):fighter.item.biome,damage);
+    if(damage>0)raidScene?.attack(index,-1,move?elementBiome(move.type):fighter.item.biome,damage);
     const effect=move?.effectiveness===0?" · 효과 없음":move?.effectiveness>=2?" · 효과가 굉장했다!":move?.effectiveness<1?" · 효과가 약했다":"";
     fighter.move=move?.name||fighter.move;
     message=fighter.name+"의 "+fighter.move+"! "+damage+" 피해"+effect;
@@ -524,7 +524,7 @@ function raidTick() {
     const alive=raid.party.map((fighter,index)=>({fighter,index})).filter(x=>x.fighter.hp>0);
     if(alive.length) {
       raidScene?.areaBurst?.(raid.biome);
-      const bossMove=rules&&raid.bossProfile?raid.bossProfile.moves.map(m=>({...m,score:(m.category==="physical"?raid.bossProfile.attack:raid.bossProfile.special)*m.power*alive.reduce((n,x)=>n+rules.effectiveness(m.type,x.fighter.profile.types),0)})).sort((a,b)=>b.score-a.score)[0]:null;
+      const bossMove=raid.bossProfile.moves.map(m=>({...m,score:alive.reduce((total,x)=>total+rules.damage(raid.bossProfile,x.fighter.profile,{...m,effectiveness:rules.effectiveness(m.type,x.fighter.profile.types)}),0)})).sort((a,b)=>b.score-a.score)[0];
       const hits=[];
       for(const target of alive) {
         const eff=bossMove?rules.effectiveness(bossMove.type,target.fighter.profile.types):1;
@@ -537,7 +537,7 @@ function raidTick() {
         const matchup=eff===0?"무효":eff===4?"4배 약점":eff===2?"2배 약점":eff===.5?"반감":eff===.25?"이중반감":"정배";
         hits.push(target.fighter.name+" "+matchup+(damage>0?" · "+damage+" 피해":""));
       }
-      message=raid.boss.name+"의 광역 "+(bossMove?.name||RAID_ELEMENTS[raid.biome]+" 폭발")+"! 파티 전원 공격 · "+hits.join(" / ");
+      message=raid.boss.name+"의 광역 "+(bossMove?.name||RAID_ELEMENTS[raid.biome]+" 폭발")+" ("+rules.typeName(bossMove.type)+")! · "+hits.join(" / ");
     }
   }
   if(message)$("raidLog").textContent=message;
@@ -1116,12 +1116,3 @@ function drawScene(now) {
 render();
 forceRaidIfReady();
 requestAnimationFrame(drawScene);
-
-
-
-
-
-
-
-
-
