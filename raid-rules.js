@@ -33,6 +33,9 @@ window.RaidRules=(()=>{
     17:[["깨물어부수기",80,"physical"],["악의파동",80,"special"]],
     18:[["치근거리기",90,"physical"],["문포스",95,"special"]]
   };
+  const biomeType={sea:[11],cave:[5,6],lava:[10],mercury:[9],glacier:[15],meadow:[12,7],dream:[14,18],storm:[13,3],shadow:[8,17],martial:[2,1],dragon:[16,3],venom:[4]};
+  const formTypes={palkiaOrigin:[11,16],zygardeComplete:[16,5],groudonPrimal:[5,10],diancieMega:[6,18],zacianCrowned:[18,9],zamazentaCrowned:[2,9],necrozmaDusk:[14,9],necrozmaDawn:[14,8],kyuremBlack:[16,15],kyuremWhite:[16,15],shayminSky:[12,3],hoopaUnbound:[14,17],ultraNecrozma:[14,16]};
+  function typesFor(p){return window.POKEMON_TYPES?.[p.id]||biomeType[p.biome]||[1];}
   function profile(p,shiny=false,formKey=null){
     const form=window.SPECIAL_FORMS?.[formKey];
     const types=form?.types||formTypes[formKey]||typesFor(p);
@@ -42,7 +45,8 @@ window.RaidRules=(()=>{
     const hp=base[0],attack=base[1],defense=base[2],special=base[3],specialDefense=base[4];
     const moveset=types.flatMap(type=>moves[type].map(([name,power,category])=>({name,power,category,type})));
     return {types,hp,attack,special,defense,specialDefense,interval:Math.max(.6,2.2-base[5]*.009),moves:moveset};
-  }  function effectiveness(type,targetTypes){
+  }
+  function effectiveness(type,targetTypes){
     return targetTypes.reduce((n,target)=>{
       const row=chart[type];return n*(row.zero?.includes(target)?0:row.strong?.includes(target)?2:row.weak?.includes(target)?.5:1);
     },1);
@@ -65,6 +69,9 @@ window.RaidRules=(()=>{
   const typeName=id=>names[id]||"???";
   return {profile,bestMove,damage,effectiveness,typeName,typesFor};
 })();
+
+
+
 
 
 

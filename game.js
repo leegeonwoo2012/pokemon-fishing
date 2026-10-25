@@ -534,7 +534,8 @@ function raidTick() {
         const damage=eff===0?0:Math.max(1,Math.round(raid.bossAttack*moveScale*eff*(100/(75+defense*.2))));
         target.fighter.hp=Math.max(0,target.fighter.hp-damage);
         if(damage>0)raidScene?.attack(-1,target.index,bossMove?elementBiome(bossMove.type):raid.biome,damage);
-        hits.push(target.fighter.name+(eff===0?" 무효":(damage+" 피해"+(eff>=2?" · 효과가 굉장했다!":eff<1?" · 효과가 약했다":""))));
+        const matchup=eff===0?"무효":eff===4?"4배 약점":eff===2?"2배 약점":eff===.5?"반감":eff===.25?"이중반감":"정배";
+        hits.push(target.fighter.name+" "+matchup+(damage>0?" · "+damage+" 피해":""));
       }
       message=raid.boss.name+"의 광역 "+(bossMove?.name||RAID_ELEMENTS[raid.biome]+" 폭발")+"! 파티 전원 공격 · "+hits.join(" / ");
     }
@@ -1115,6 +1116,7 @@ function drawScene(now) {
 render();
 forceRaidIfReady();
 requestAnimationFrame(drawScene);
+
 
 
 
