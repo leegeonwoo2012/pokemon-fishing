@@ -528,13 +528,13 @@ function raidTick() {
       const hits=[];
       for(const target of alive) {
         const eff=bossMove?rules.effectiveness(bossMove.type,target.fighter.profile.types):1;
-        const defense=target.fighter.profile?.defense||100;
+        const defense=bossMove?.category==="special"?(target.fighter.profile?.specialDefense||target.fighter.profile?.defense||100):(target.fighter.profile?.defense||100);
         const offense=bossMove?(bossMove.category==="physical"?raid.bossProfile.attack:raid.bossProfile.special):160;
         const moveScale=bossMove?Math.max(.8,Math.min(1.3,offense/160))*bossMove.power/100:1;
-        const damage=Math.max(eff===0?0:1,Math.round(raid.bossAttack*moveScale*eff*(100/(75+defense*.2))));
+        const damage=eff===0?0:Math.max(1,Math.round(raid.bossAttack*moveScale*eff*(100/(75+defense*.2))));
         target.fighter.hp=Math.max(0,target.fighter.hp-damage);
-        raidScene?.attack(-1,target.index,bossMove?elementBiome(bossMove.type):raid.biome,damage);
-        hits.push(target.fighter.name+" "+damage);
+        if(damage>0)raidScene?.attack(-1,target.index,bossMove?elementBiome(bossMove.type):raid.biome,damage);
+        hits.push(target.fighter.name+(eff===0?" 무효":(damage+" 피해"+(eff>=2?" · 효과가 굉장했다!":eff<1?" · 효과가 약했다":""))));
       }
       message=raid.boss.name+"의 광역 "+(bossMove?.name||RAID_ELEMENTS[raid.biome]+" 폭발")+"! 파티 전원 공격 · "+hits.join(" / ");
     }
@@ -1115,6 +1115,8 @@ function drawScene(now) {
 render();
 forceRaidIfReady();
 requestAnimationFrame(drawScene);
+
+
 
 
 
