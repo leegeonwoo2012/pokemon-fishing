@@ -19,9 +19,10 @@ const KNOWN_DEX={claydol:344,cradily:346,armaldo:348,accelgor:617,bouffalant:626
 const PREFERRED_ITEMS=["choiceScarf","choiceBand","choiceSpecs","focusSash","leftovers"];
 const GENERATED_SPECIES=new Set();
 const TEAM_SIZE=6;
-let arenaSelected=[],arenaActive=false,arenaCurrentResolved=false,arenaLastWinner=null,arenaBattleId="",arenaPlayerSets=[],pendingArenaStart=null,arenaChildReady=false;
+let arenaSelected=[],arenaActive=false,arenaCurrentResolved=false,arenaLastWinner=null,arenaBattleId="",arenaPlayerSets=[],pendingArenaStart=null,arenaChildReady=false,arenaSearchTerm="";
 
-function arenaOwned(){return [...state.bag,...state.reserve];}
+function arenaOwned(){return state.caughtHistory||[];}
+function arenaRequiredCount(){return Math.min(TEAM_SIZE,arenaOwned().length);}
 function dexForSpecies(id){return CORE.species[id]?.nationalDex??KNOWN_DEX[id]??0;}
 function isAttackMove(move){return move&&move.category!=="status"&&Number(move.power)>0&&(move.accuracy==null||move.accuracy>=70);}
 function rankedMoves(entry,preferredTypes=entry.types){const stats=entry.baseStats;return entry.learnset.map(id=>CORE.moves[id]).filter(isAttackMove).map(move=>({move,score:move.power*(move.accuracy==null?1:move.accuracy/100)*(preferredTypes.includes(move.type)?1.5:1)*(move.category==="physical"?stats.atk:stats.spa)})).sort((a,b)=>b.score-a.score).map(x=>x.move);}
@@ -34,25 +35,29 @@ function tuneCompetitiveSet(entry,set,slot=0){const s=entry.baseStats,physical=s
 function setForCaught(item,slot){const entry=findCaughtSpecies(item);return tuneCompetitiveSet(entry,CORE.createSet(entry.id),slot);}
 function setForChampion(id,slot){const dex=dexForSpecies(id),entry=ensureArenaSpecies(id,dex,CORE.species[id]?.name||BY_ID.get(dex)?.name||id);return tuneCompetitiveSet(entry,CORE.createSet(id),slot);}
 function itemSetSummary(item,slot){const set=setForCaught(item,slot),moveNames=set.moves.map(id=>CORE.moves[id]?.name||id).join(" · ");return '<small class="arena-set-summary">'+(CORE.abilities[set.abilityId]?.name||set.abilityId)+' · '+(CORE.items[set.itemId]?.name||"도구 없음")+'<br>'+moveNames+'<br>레벨 50 · 노력치 '+Object.entries(set.evs).filter(([,v])=>v).map(([stat,v])=>stat.toUpperCase()+" "+v).join(" / ")+'</small>';}
-function renderArenaTab(){const index=state.arenaChampionIndex||0,progress=Math.min(index,9),champ=ARENA_CHAMPIONS[Math.min(index,8)];return '<div class="arena-tab-card"><div class="arena-emblem">♜</div><small>CHAMPION CIRCUIT · GEN 1—9</small><h3>배틀 아레나</h3><p>잡은 포켓몬 여섯 마리로 레드부터 테사까지 챔피언에게 도전하세요. 이전 배틀 웹의 전투 화면과 턴 연출을 그대로 불러옵니다.</p><div class="arena-tab-stats"><span>보유 포켓몬 <b>'+arenaOwned().length+'</b></span><span>연속전 승리 <b>'+progress+' / 9</b></span><span>누적 전적 <b>'+state.arenaWins+'승 '+state.arenaLosses+'패</b></span></div><div class="arena-tab-next">'+(index>=9?'챔피언 연속전 완주! · 다시 도전할 수 있어요.':'다음 상대 · '+champ.name+' <small>GEN '+champ.gen+'</small>')+'</div><button class="primary-button arena-enter-button" data-arena-action="open">'+(index>=9?'챔피언 연속전 다시 시작':'아레나 입장하기 ↗')+'</button><small class="arena-tab-rule">승리 +200,000 코인 · 패배 −500,000 코인 (잔액은 음수가 될 수 있음)</small></div>';}
+function renderArenaTab(){const index=state.arenaChampionIndex||0,progress=Math.min(index,9),champ=ARENA_CHAMPIONS[Math.min(index,8)];return '<div class="arena-tab-card"><div class="arena-emblem">♜</div><small>CHAMPION CIRCUIT · GEN 1—9</small><h3>배틀 아레나</h3><p>가방에 남아 있지 않아도, 한 번 잡았던 포켓몬을 최대 6마리 골라 챔피언에게 도전하세요. 아레나에서만 쓰이며 레이드 파티에는 들어가지 않습니다.</p><div class="arena-tab-stats"><span>포획 기록 <b>'+arenaOwned().length+'</b></span><span>연속전 승리 <b>'+progress+' / 9</b></span><span>누적 전적 <b>'+state.arenaWins+'승 '+state.arenaLosses+'패</b></span></div><div class="arena-tab-next">'+(index>=9?'챔피언 연속전 완주! · 다시 도전할 수 있어요.':'다음 상대 · '+champ.name+' <small>GEN '+champ.gen+'</small>')+'</div><button class="primary-button arena-enter-button" data-arena-action="open">'+(index>=9?'챔피언 연속전 다시 시작':'아레나 입장하기 ↗')+'</button><small class="arena-tab-rule">승리 +200,000 코인 · 패배 −500,000 코인 (잔액은 음수가 될 수 있음)</small></div>';}
 function currentChampion(){return ARENA_CHAMPIONS[Math.min(state.arenaChampionIndex||0,8)];}
 function enemySprite(id,cls=""){const dex=dexForSpecies(id);return '<img class="'+cls+'" src="./sprites/'+dex+'.png" data-pokemon-id="'+dex+'" alt="'+(CORE.species[id]?.name||id)+'">';}
 function championTeamMarkup(champ){return champ.team.map(id=>'<div class="arena-champ-mon">'+enemySprite(id,'arena-champ-sprite')+'<span>'+(CORE.species[id]?.name||id)+'</span></div>').join("");}
 function renderArenaSelect(){
   const champ=currentChampion(),owned=arenaOwned();
-  $("arenaSubtitle").textContent="가방과 보관함에서 여섯 마리를 고르세요. 챔피언도 6마리로 맞섭니다.";
+  const required=arenaRequiredCount();
+  $("arenaSubtitle").textContent=required<TEAM_SIZE?"가방과 별개인 포획 기록에서 지금 가진 "+required+"마리로 바로 출전할 수 있어요. 더 많은 포켓몬을 잡으면 최대 6마리까지 고를 수 있습니다.":"한 번이라도 잡았던 포켓몬 중 여섯 마리를 고르세요. 선택한 포켓몬은 레이드 파티에 들어가지 않습니다.";
   $("arenaProgress").innerHTML=ARENA_CHAMPIONS.map((c,i)=>'<span class="arena-progress-step '+(i<(state.arenaChampionIndex||0)?'cleared':'')+' '+(i===(state.arenaChampionIndex||0)?'current':'')+'">'+(i+1)+'</span>').join("");
   $("arenaChampionCard").innerHTML='<div class="arena-champion-copy"><small>GEN '+champ.gen+' · NEXT CHAMPION</small><strong>'+champ.name+'</strong><span>'+champ.title+'</span></div><div class="arena-champion-team">'+championTeamMarkup(champ)+'</div>';
-  $("arenaPickCount").textContent=arenaSelected.length+" / 6 선택";
-  $("arenaStartButton").disabled=arenaSelected.length!==TEAM_SIZE;
-  $("arenaTeamPicker").innerHTML=owned.length?owned.map((item,index)=>{
+  $("arenaPickCount").textContent=arenaSelected.length+" / "+required+" 선택";
+  $("arenaStartButton").disabled=required===0||arenaSelected.length!==required;
+  $("arenaStartButton").textContent=required===TEAM_SIZE?"6마리로 도전하기 ↗":required?required+"마리로 바로 출전 ↗":"포켓몬을 먼저 낚아주세요";
+  const search=$("arenaSearch");if(search&&search.value!==arenaSearchTerm)search.value=arenaSearchTerm;
+  const filtered=owned.map((item,index)=>({item,index})).filter(({item})=>itemName(item).toLowerCase().includes(arenaSearchTerm.trim().toLowerCase()));
+  $("arenaTeamPicker").innerHTML=filtered.length?filtered.map(({item,index})=>{
     const selected=arenaSelected.includes(index),slot=Math.max(0,arenaSelected.indexOf(index));
     let summary="";
-    try{summary=itemSetSummary(item,slot);}catch(error){summary='<small class="arena-set-summary">세팅 구성 오류 · '+String(error.message||error)+'</small>';}
+    if(selected)try{summary=itemSetSummary(item,slot);}catch(error){summary='<small class="arena-set-summary">세팅 구성 오류 · '+String(error.message||error)+'</small>';}
     return '<button class="arena-owned-card '+(selected?'selected':'')+'" data-arena-pick="'+index+'" aria-pressed="'+selected+'">'+spriteMarkup(item,'arena-owned-sprite')+'<span class="arena-owned-name">'+(item.shiny?'✦ ':'')+itemName(item)+'</span>'+summary+(selected?'<b class="arena-slot-mark">선발 '+(slot+1)+'</b>':'')+'</button>';
-  }).join(""):'<div class="arena-empty">아레나에 데려갈 포켓몬이 없어요. 먼저 낚은 포켓몬을 보관해 주세요.</div>';
+  }).join(""):owned.length?'<div class="arena-empty">검색한 포켓몬이 포획 기록에 없어요.</div>':'<div class="arena-empty">아직 잡아본 포켓몬이 없어요. 먼저 포켓몬을 낚아보세요.</div>';
 }
-function startArenaBattle(){if(arenaSelected.length!==TEAM_SIZE)return;const owned=arenaOwned(),items=arenaSelected.map(index=>owned[index]).filter(Boolean);if(items.length!==TEAM_SIZE)return;try{arenaPlayerSets=items.map((item,index)=>setForCaught(item,index));arenaActive=true;arenaCurrentResolved=false;arenaLastWinner=null;launchArenaBattle(state.arenaChampionIndex);$("arenaSelectView").classList.add("hidden");$("arenaCompleteView").classList.add("hidden");$("arenaFightView").classList.remove("hidden");$("arenaRoom").classList.add("embedded-active");}catch(error){alert("아레나 팀을 만들지 못했어요. "+String(error.message||error));}}
+function startArenaBattle(){const required=arenaRequiredCount();if(required===0||arenaSelected.length!==required)return;const owned=arenaOwned(),items=arenaSelected.map(index=>owned[index]).filter(Boolean);if(items.length!==required)return;try{arenaPlayerSets=items.map((item,index)=>setForCaught(item,index));arenaActive=true;arenaCurrentResolved=false;arenaLastWinner=null;launchArenaBattle(state.arenaChampionIndex);$("arenaSelectView").classList.add("hidden");$("arenaCompleteView").classList.add("hidden");$("arenaFightView").classList.remove("hidden");$("arenaRoom").classList.add("embedded-active");}catch(error){alert("아레나 팀을 만들지 못했어요. "+String(error.message||error));}}
 function launchArenaBattle(championIndex){const champ=ARENA_CHAMPIONS[championIndex];if(!champ){showArenaComplete();return;}try{const cpuTeam=champ.team.map((id,index)=>setForChampion(id,index)),allSets=[...arenaPlayerSets,...cpuTeam],speciesOverrides=Object.fromEntries([...new Set(allSets.map(set=>set.speciesId).filter(id=>GENERATED_SPECIES.has(id)))].map(id=>[id,CORE.species[id]]));arenaBattleId="arena-"+Date.now()+"-"+Math.random().toString(36).slice(2);arenaCurrentResolved=false;arenaLastWinner=null;pendingArenaStart={channel:"tidebound-arena",type:"start",battleId:arenaBattleId,opponentName:champ.name,playerTeam:arenaPlayerSets,cpuTeam,speciesOverrides,seed:(Date.now()^state.totalCatches^state.arenaWins)>>>0};const frame=$("arenaBattleFrame");frame.style.opacity="0";if(!frame.dataset.requested){frame.dataset.requested="1";frame.src="./battle/index.html?tidebound=arena";}if(arenaChildReady)sendPendingArenaStart();}catch(error){alert("챔피언 팀을 불러오지 못했어요. "+String(error.message||error));}}
 function sendPendingArenaStart(){if(!pendingArenaStart||!arenaChildReady)return;$("arenaBattleFrame").contentWindow.postMessage(pendingArenaStart,"*");pendingArenaStart=null;}
 function settleArena(winner){if(arenaCurrentResolved)return;arenaCurrentResolved=true;arenaLastWinner=winner;if(winner==="player"){state.money+=200000;state.arenaWins=(state.arenaWins||0)+1;state.arenaChampionIndex=Math.min(9,(state.arenaChampionIndex||0)+1);}else{state.money-=500000;state.arenaLosses=(state.arenaLosses||0)+1;}persist();render();}
@@ -63,6 +68,7 @@ function closeArena(force=false){if(arenaActive&&!arenaCurrentResolved&&!force){
 
 $("tabContent").addEventListener("click",event=>{if(event.target.closest("[data-arena-action='open']"))openArena();});
 $("arenaTeamPicker").addEventListener("click",event=>{const card=event.target.closest("[data-arena-pick]");if(!card)return;const index=Number(card.dataset.arenaPick),at=arenaSelected.indexOf(index);if(at>=0)arenaSelected.splice(at,1);else if(arenaSelected.length<TEAM_SIZE)arenaSelected.push(index);renderArenaSelect();});
+$("arenaSearch").addEventListener("input",event=>{arenaSearchTerm=event.target.value;renderArenaSelect();});
 $("arenaStartButton").addEventListener("click",startArenaBattle);
 $("arenaCloseButton").addEventListener("click",()=>closeArena());
 $("arenaExitButton").addEventListener("click",()=>closeArena());

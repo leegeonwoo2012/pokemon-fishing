@@ -94,7 +94,7 @@ const rarityMarkup = tier => '<span class="rarity-label rarity-' + (tier==="rare
 const shinyMarkup = shiny => shiny ? '<span class="shiny-badge">✦ 이로치</span>' : '';
 const initialState = () => ({
   money:0,totalCatches:0,misses:0,biome:"sea",equipped:{...STARTER_ROD},
-  ownedRods:[0],bag:[],reserve:[],discovered:[],shinyDiscovered:[],bossWins:[],lostDex:{},lastRaidAttempt:null,lastCatch:null,sound:true,
+  ownedRods:[0],bag:[],caughtHistory:[],discovered:[],shinyDiscovered:[],bossWins:[],lostDex:{},lastRaidAttempt:null,lastCatch:null,sound:true,
   arenaChampionIndex:0,arenaWins:0,arenaLosses:0
 });
 function normalizeItem(value) {
@@ -104,6 +104,14 @@ function normalizeItem(value) {
     return {id:value.id,biome,shiny:value.shiny===true,form:SPECIAL_FORMS[value.form]?.id===value.id?value.form:null};
   }
   return null;
+}
+function normalizeCaughtHistory(values) {
+  const unique=new Map();
+  for(const value of Array.isArray(values)?values:[]) {
+    const item=normalizeItem(value);
+    if(item)unique.set(item.id+":"+(item.form||"")+":"+(item.shiny?"1":"0"),item);
+  }
+  return [...unique.values()];
 }
 function isCompleteWith(discovered,biomeId) {
   const found = new Set(discovered);
@@ -123,8 +131,15 @@ function loadState() {
     clean.discovered = Array.isArray(saved.discovered) ? [...new Set(saved.discovered.filter(id => BY_ID.has(id)))] : [];
     clean.shinyDiscovered = Array.isArray(saved.shinyDiscovered) ? [...new Set(saved.shinyDiscovered.filter(id => BY_ID.has(id)))] : [];
     const oldBag = Array.isArray(saved.bag) ? saved.bag.map(normalizeItem).filter(Boolean) : [];
+    const oldReserve = Array.isArray(saved.reserve) ? saved.reserve.map(normalizeItem).filter(Boolean) : [];
     clean.bag = oldBag.slice(0,5);
-    clean.reserve = [...(Array.isArray(saved.reserve)?saved.reserve.map(normalizeItem).filter(Boolean):[]),...oldBag.slice(5)];
+    clean.caughtHistory=normalizeCaughtHistory([
+      ...(Array.isArray(saved.caughtHistory)?saved.caughtHistory:[]),
+      ...(Array.isArray(saved.discovered)?saved.discovered:[]),
+      ...Object.values(saved.lostDex||{}).flat(),
+      ...(Array.isArray(saved.shinyDiscovered)?saved.shinyDiscovered.map(id=>({id,shiny:true})):[]),
+      ...oldBag,...oldReserve,normalizeItem(saved.lastCatch)
+    ]);
     clean.bossWins = Array.isArray(saved.bossWins) ? [...new Set(saved.bossWins.filter(key=>BIOMES.some(b=>Array.from({length:10},(_,i)=>b.id+":"+(i+1)).includes(key))))] : [];
     if (saved.lastRaidAttempt && typeof saved.lastRaidAttempt.key === "string" && Number.isInteger(saved.lastRaidAttempt.catches))
       clean.lastRaidAttempt={key:saved.lastRaidAttempt.key,catches:Math.max(0,saved.lastRaidAttempt.catches)};
@@ -344,14 +359,10 @@ function updateLastCatch() {
 }
 function renderBag() {
   let html='<div class="bag-toolbar"><strong>레이드 파티 · '+state.bag.length+'/5마리</strong><button class="small-action" data-action="sell-all" '+(state.bag.length?"":"disabled")+'>전체 판매</button></div>';
-  if (!state.bag.length && !state.reserve.length) return html+'<div class="empty-bag"><span class="empty-art">◁°))))><</span><strong>가방이 텅 비었어요</strong>낚은 포켓몬을 보관하면 이곳에 나타납니다.</div>';
+  if (!state.bag.length) return html+'<div class="empty-bag"><span class="empty-art">◁°))))><</span><strong>레이드 파티가 비었어요</strong>낚은 포켓몬을 가방에 보관하면 이곳에 나타납니다. 판매한 포켓몬도 아레나 기록에 남습니다.</div>';
   html+='<div class="item-list">'+state.bag.map((item,index)=>{
     const p=BY_ID.get(item.id);
     return '<div class="pokemon-item'+(item.shiny?" shiny":"")+'">'+spriteMarkup(item,"")+'<div class="pokemon-item-main">'+rarityMarkup(displayTier(item))+formMarkup(item)+shinyMarkup(item.shiny)+'<strong>'+itemName(item)+'</strong><small>'+biomeById(item.biome||p.biome).name+' · No. '+String(p.id).padStart(4,"0")+'</small></div><button class="sell-button" data-action="sell" data-index="'+index+'">'+formatMoney(salePrice(item))+' ✦</button></div>';
-  }).join("")+'</div>';
-  if(state.reserve.length)html+='<div class="reserve-title">이전 저장 데이터 보관함 · '+state.reserve.length+'마리</div><div class="item-list">'+state.reserve.map((item,index)=>{
-    const p=BY_ID.get(item.id);
-    return '<div class="pokemon-item">'+spriteMarkup(item,"")+'<div class="pokemon-item-main">'+rarityMarkup(displayTier(item))+formMarkup(item)+shinyMarkup(item.shiny)+'<strong>'+itemName(item)+'</strong></div><div class="reserve-actions"><button data-action="reserve-move" data-index="'+index+'">가방으로</button><button data-action="reserve-sell" data-index="'+index+'">판매 '+formatMoney(salePrice(item))+'</button></div></div>';
   }).join("")+'</div>';
   return html;
 }
@@ -602,8 +613,8 @@ function showCatch(item) {
   $("keepButton").disabled=false;
   $("keepButton").textContent=state.bag.length>=5?"기존 포켓몬과 교체":"가방에 보관";
   $("swapPanel").classList.add("hidden");
-  $("catchChoiceNote").textContent=state.bag.length>=5?"이번 포켓몬을 판매하거나, 교체할 기존 포켓몬을 선택하세요.":"가방에 보관하면 레이드에서 자동 전투합니다.";
-  if(state.bag.length>=5)$("swapPanel").innerHTML='<strong>파티 교체 · 기존 포켓몬을 팔고 새 포켓몬을 보관</strong>'+state.bag.map((old,index)=>'<button data-swap="'+index+'"><span>'+itemName(old)+(old.shiny?" ✦":"")+'</span><span>판매 +'+formatMoney(salePrice(old))+' 코인</span></button>').join("");
+  $("catchChoiceNote").textContent=state.bag.length>=5?"가방은 레이드 파티 5마리까지예요. 아레나에서는 잡았던 적 있는 포켓몬을 최대 6마리까지 따로 고를 수 있습니다.":"보관한 포켓몬이 레이드에서 자동 전투합니다. 잡은 포켓몬은 판매해도 아레나 포획 기록에 남아요.";
+  if(state.bag.length>=5){$("swapPanel").classList.remove("hidden");$("swapPanel").innerHTML='<strong>파티 교체 · 기존 포켓몬을 팔고 새 포켓몬을 보관</strong>'+state.bag.map((old,index)=>'<button data-swap="'+index+'"><span>'+itemName(old)+(old.shiny?" ✦":"")+'</span><span>판매 +'+formatMoney(salePrice(old))+' 코인</span></button>').join("");}
   $("catchOverlay").classList.remove("hidden");
   $("keepButton").focus();
   playCatchSound(item);
@@ -741,6 +752,7 @@ function hook() {
   const item=rollCatch(), p=BY_ID.get(item.id);
   state.totalCatches++;
   state.lastCatch=item;
+  state.caughtHistory=normalizeCaughtHistory([...state.caughtHistory,item]);
   if (!state.discovered.includes(item.id)) state.discovered.push(item.id);
   state.lostDex[state.biome]=(state.lostDex[state.biome]||[]).filter(id=>id!==item.id);
   if (item.shiny && !state.shinyDiscovered.includes(item.id)) state.shinyDiscovered.push(item.id);
@@ -762,16 +774,7 @@ $("tabContent").addEventListener("click",e=>{
   const btn=e.target.closest("button[data-action]");
   if (!btn) return;
   const action=btn.dataset.action;
-  if (action==="reserve-move") {
-    const index=Number(btn.dataset.index);
-    if(!Number.isInteger(index)||index<0||index>=state.reserve.length)return;
-    if(state.bag.length>=5){showToast("가방의 포켓몬 한 마리를 먼저 판매해 주세요.");return;}
-    state.bag.unshift(state.reserve.splice(index,1)[0]);persist();render();showToast("보관함에서 파티로 이동했어요!");
-  } else if (action==="reserve-sell") {
-    const index=Number(btn.dataset.index);
-    if(!Number.isInteger(index)||index<0||index>=state.reserve.length)return;
-    const item=state.reserve.splice(index,1)[0];state.money+=salePrice(item);persist();render();showToast(itemName(item)+" 판매! ✦ "+formatMoney(salePrice(item)));
-  } else if (action==="sell") {
+  if (action==="sell") {
     const index=Number(btn.dataset.index);
     if (!Number.isInteger(index)||index<0||index>=state.bag.length) return;
     const [item]=state.bag.splice(index,1), p=BY_ID.get(item.id);
@@ -804,7 +807,7 @@ $("soundButton").addEventListener("click",()=>{state.sound=!state.sound;persist(
 window.addEventListener("keydown",e=>{
   if (e.key==="Escape") {
     if (!$("raidOverlay").classList.contains("hidden")) { if (!activeRaid?.running) closeRaid(); return; }
-    if (pendingCatch) settleCatch(state.bag.length>=5);
+    if (pendingCatch) settleCatch(false);
     else if (!$("unlockOverlay").classList.contains("hidden")) advanceBiome();
     return;
   }

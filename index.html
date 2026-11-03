@@ -94,7 +94,7 @@
       <div id="catchInfo"></div>
       <div class="swap-panel hidden" id="swapPanel"></div>
       <div class="modal-actions"><button id="keepButton" class="secondary-button">가방에 보관</button><button id="sellCatchButton" class="primary-button">바로 판매</button></div>
-      <span class="modal-note" id="catchChoiceNote">가방은 최대 5마리이며, 보관한 포켓몬이 레이드에서 자동 전투합니다.</span>
+      <span class="modal-note" id="catchChoiceNote">가방은 레이드 파티 5마리까지예요. 아레나에서는 잡았던 적 있는 포켓몬을 최대 6마리까지 따로 고를 수 있습니다.</span>
     </div>
   </div>
 
@@ -123,13 +123,14 @@
   <div class="arena-overlay hidden" id="arenaOverlay" role="dialog" aria-modal="true" aria-labelledby="arenaTitle">
     <section class="arena-room pixel-panel" id="arenaRoom">
       <header class="arena-room-head">
-        <div><small>CHAMPION CIRCUIT · BATTLE WEB ENGINE</small><h2 id="arenaTitle">배틀 아레나</h2><p id="arenaSubtitle">잡은 포켓몬 6마리로 챔피언 연속전에 도전하세요.</p></div>
+        <div><small>CHAMPION CIRCUIT · BATTLE WEB ENGINE</small><h2 id="arenaTitle">배틀 아레나</h2><p id="arenaSubtitle">보유한 포켓몬 최대 6마리로 챔피언 연속전에 도전하세요.</p></div>
         <button id="arenaCloseButton" class="arena-close" aria-label="아레나 닫기">×</button>
       </header>
       <div id="arenaSelectView">
         <div class="arena-progress" id="arenaProgress"></div>
         <div class="arena-champion-card" id="arenaChampionCard"></div>
         <div class="arena-pick-head"><strong>전투에 데려갈 포켓몬 6마리</strong><span id="arenaPickCount">0 / 6 선택</span></div>
+        <label class="arena-dex-filter"><span>포획 기록에서 선택</span><input id="arenaSearch" type="search" placeholder="포켓몬 이름 검색" autocomplete="off"></label>
         <div id="arenaTeamPicker" class="arena-team-picker"></div>
         <div class="arena-select-footer"><span>추천 노력치 · 특성 · 기술 · 지닌 도구 자동 적용</span><button id="arenaStartButton" class="primary-button" disabled>6마리를 골라 도전하기 ↗</button></div>
       </div>
