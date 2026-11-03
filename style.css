@@ -187,3 +187,4 @@ body[data-biome=shadow] .pixel-panel{border-color:#796993}
 body[data-biome=martial] .pixel-panel{border-color:#a77e6e}
 body[data-biome=dragon] .pixel-panel{border-color:#7e92c1}
 body[data-biome=venom] .pixel-panel{border-color:#6f9b73}
+.rarity-rare-upper{color:#ffe0a6;background:linear-gradient(110deg,#79573b,#8c6440,#6f5143);border:1px solid #e2b978;text-shadow:0 1px #382619}

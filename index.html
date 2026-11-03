@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="./style.css">
   <link rel="stylesheet" href="./arena.css">
   <link rel="stylesheet" href="./arena-overrides.css">
+  <link rel="stylesheet" href="./arena-embed.css">
 </head>
 <body>
   <div class="app-shell">
@@ -120,27 +121,22 @@
     </div>
   </div>
   <div class="arena-overlay hidden" id="arenaOverlay" role="dialog" aria-modal="true" aria-labelledby="arenaTitle">
-    <section class="arena-room pixel-panel">
+    <section class="arena-room pixel-panel" id="arenaRoom">
       <header class="arena-room-head">
-        <div><small>CHAMPION CIRCUIT · BATTLE WEB ENGINE</small><h2 id="arenaTitle">배틀 아레나</h2><p id="arenaSubtitle">잡은 포켓몬 3마리로 챔피언 연속전에 도전하세요.</p></div>
+        <div><small>CHAMPION CIRCUIT · BATTLE WEB ENGINE</small><h2 id="arenaTitle">배틀 아레나</h2><p id="arenaSubtitle">잡은 포켓몬 6마리로 챔피언 연속전에 도전하세요.</p></div>
         <button id="arenaCloseButton" class="arena-close" aria-label="아레나 닫기">×</button>
       </header>
       <div id="arenaSelectView">
         <div class="arena-progress" id="arenaProgress"></div>
         <div class="arena-champion-card" id="arenaChampionCard"></div>
-        <div class="arena-pick-head"><strong>전투에 데려갈 포켓몬 3마리</strong><span id="arenaPickCount">0 / 3 선택</span></div>
+        <div class="arena-pick-head"><strong>전투에 데려갈 포켓몬 6마리</strong><span id="arenaPickCount">0 / 6 선택</span></div>
         <div id="arenaTeamPicker" class="arena-team-picker"></div>
-        <div class="arena-select-footer"><span>추천 노력치 · 특성 · 기술 · 지닌 도구 자동 적용</span><button id="arenaStartButton" class="primary-button" disabled>3마리를 골라 도전하기 ↗</button></div>
+        <div class="arena-select-footer"><span>추천 노력치 · 특성 · 기술 · 지닌 도구 자동 적용</span><button id="arenaStartButton" class="primary-button" disabled>6마리를 골라 도전하기 ↗</button></div>
       </div>
       <div id="arenaFightView" class="hidden">
-        <div id="arenaBattlefield" class="arena-battlefield"></div>
-        <div id="arenaTeams" class="arena-teams"></div>
-        <div id="arenaBattleLog" class="arena-battle-log" aria-live="polite"></div>
-        <div class="arena-action-label" id="arenaActionLabel"></div>
-        <div id="arenaMoveButtons" class="arena-move-buttons"></div>
-        <div id="arenaSwitchButtons" class="arena-switch-buttons"></div>
-        <div id="arenaResultActions" class="arena-result-actions hidden"><button id="arenaResultButton" class="primary-button"></button><button id="arenaExitButton" class="secondary-button">아레나 나가기</button></div>
+        <iframe id="arenaBattleFrame" title="포켓몬 배틀 아레나 전투 화면" allow="autoplay" src="about:blank"></iframe>
       </div>
+      <div id="arenaCompleteView" class="arena-complete-view hidden"><div class="arena-complete-emblem">🏆</div><small>CHAMPION CIRCUIT COMPLETE</small><h2>9세대 챔피언 제패!</h2><p>레드부터 테사까지 모든 챔피언을 이겼습니다.</p><button id="arenaRestartRunButton" class="primary-button">새 연속전 시작</button><button id="arenaExitButton" class="secondary-button">아레나 나가기</button></div>
     </section>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -150,7 +146,7 @@
   <script src="./raid-scene.js" defer></script>
   <script src="./arena-core.js" defer></script>
   <script src="./game.js" defer></script>
-  <script src="./arena.js" defer></script>
+  <script src="./arena-bridge.js" defer></script>
 </body>
 </html>
 
