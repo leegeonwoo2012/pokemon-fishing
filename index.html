@@ -10,6 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Gowun+Dodum&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./arena.css">
+  <link rel="stylesheet" href="./arena-overrides.css">
 </head>
 <body>
   <div class="app-shell">
@@ -69,10 +71,11 @@
         <div class="sidebar-head"><div><small>THE FISHER'S LOG</small><h2>나의 항해 기록</h2></div><span class="book-mark">✦</span></div>
         <div class="biome-progress" id="biomeProgress"></div>
         <div class="raid-gate hidden" id="raidGate"><span id="raidGateText"></span><button id="raidEnterButton" class="primary-button">레이드방 입장 ↗</button></div>
-        <div class="tabs" role="tablist" aria-label="가방, 도감, 상점">
+        <div class="tabs" role="tablist" aria-label="가방, 도감, 상점, 배틀 아레나">
           <button class="tab active" role="tab" aria-selected="true" data-tab="bag">가방 <span id="bagCount">0</span></button>
           <button class="tab" role="tab" aria-selected="false" data-tab="dex">도감 <span id="dexCount">0</span></button>
           <button class="tab" role="tab" aria-selected="false" data-tab="shop">상점</button>
+          <button class="tab arena-tab" role="tab" aria-selected="false" data-tab="arena">아레나</button>
         </div>
         <div class="tab-content" id="tabContent"></div>
       </aside>
@@ -116,12 +119,38 @@
       <div class="raid-actions"><button id="raidStartButton" class="primary-button">자동 배틀 시작</button><button id="raidExitButton" class="secondary-button">레이드방 나가기</button></div>
     </div>
   </div>
+  <div class="arena-overlay hidden" id="arenaOverlay" role="dialog" aria-modal="true" aria-labelledby="arenaTitle">
+    <section class="arena-room pixel-panel">
+      <header class="arena-room-head">
+        <div><small>CHAMPION CIRCUIT · BATTLE WEB ENGINE</small><h2 id="arenaTitle">배틀 아레나</h2><p id="arenaSubtitle">잡은 포켓몬 3마리로 챔피언 연속전에 도전하세요.</p></div>
+        <button id="arenaCloseButton" class="arena-close" aria-label="아레나 닫기">×</button>
+      </header>
+      <div id="arenaSelectView">
+        <div class="arena-progress" id="arenaProgress"></div>
+        <div class="arena-champion-card" id="arenaChampionCard"></div>
+        <div class="arena-pick-head"><strong>전투에 데려갈 포켓몬 3마리</strong><span id="arenaPickCount">0 / 3 선택</span></div>
+        <div id="arenaTeamPicker" class="arena-team-picker"></div>
+        <div class="arena-select-footer"><span>추천 노력치 · 특성 · 기술 · 지닌 도구 자동 적용</span><button id="arenaStartButton" class="primary-button" disabled>3마리를 골라 도전하기 ↗</button></div>
+      </div>
+      <div id="arenaFightView" class="hidden">
+        <div id="arenaBattlefield" class="arena-battlefield"></div>
+        <div id="arenaTeams" class="arena-teams"></div>
+        <div id="arenaBattleLog" class="arena-battle-log" aria-live="polite"></div>
+        <div class="arena-action-label" id="arenaActionLabel"></div>
+        <div id="arenaMoveButtons" class="arena-move-buttons"></div>
+        <div id="arenaSwitchButtons" class="arena-switch-buttons"></div>
+        <div id="arenaResultActions" class="arena-result-actions hidden"><button id="arenaResultButton" class="primary-button"></button><button id="arenaExitButton" class="secondary-button">아레나 나가기</button></div>
+      </div>
+    </section>
+  </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="./data.js" defer></script>
   <script src="./battle-data.js" defer></script>
   <script src="./raid-rules.js" defer></script>
   <script src="./raid-scene.js" defer></script>
+  <script src="./arena-core.js" defer></script>
   <script src="./game.js" defer></script>
+  <script src="./arena.js" defer></script>
 </body>
 </html>
 

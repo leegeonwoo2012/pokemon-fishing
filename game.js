@@ -42,6 +42,16 @@ for (const [tier, entries] of Object.entries(LEGACY_CAVE)) for (const [id,name] 
     BY_ID.set(id,{id,name,tier,biome:"cave",price:priceFor(id,tier)});
   }
 }
+// The 600 club (pseudo-legendary line final forms) is a premium rare class.
+const UPPER_RARE_IDS=new Set([149,248,373,376,445,635,706,784,887,998]);
+for(const p of POKEMON) if(UPPER_RARE_IDS.has(p.id)) {
+  p.tier="rare"; p.upperRare=true;
+  p.price=200000+((Math.imul(p.id,2654435761)>>>0)%100000);
+}
+for(const p of BY_ID.values()) if(UPPER_RARE_IDS.has(p.id)) {
+  p.tier="rare"; p.upperRare=true;
+  p.price=200000+((Math.imul(p.id,2654435761)>>>0)%100000);
+}
 const SAVE_KEY = "tidebound-pokemon-fishing-v1";
 const SHINY_RATE = 1 / 100;
 const BIOME_TYPES = {sea:"물",cave:"바위 · 땅",lava:"불꽃",mercury:"강철",glacier:"얼음",meadow:"풀 · 벌레",dream:"에스퍼 · 페어리",storm:"전기 · 비행",shadow:"고스트 · 악",martial:"격투 · 노말",dragon:"드래곤 · 비행",venom:"독"};
@@ -56,7 +66,7 @@ const salePrice = item => {
   return price*(item.shiny?10:1);
 };
 const itemName = item => SPECIAL_FORMS[item.form]?.name || BY_ID.get(item.id).name;
-const displayTier = item => SPECIAL_FORMS[item.form]?.kind ? BY_ID.get(item.id).tier : item.form ? "mythic" : BY_ID.get(item.id).tier;
+const displayTier = item => SPECIAL_FORMS[item.form]?.kind ? BY_ID.get(item.id).tier : item.form ? "mythic" : (BY_ID.get(item.id).upperRare?"rareUpper":BY_ID.get(item.id).tier);
 const formMarkup = item => SPECIAL_FORMS[item.form]?.kind ? '<span class="form-badge '+SPECIAL_FORMS[item.form].kind+'">'+(SPECIAL_FORMS[item.form].kind==="primal"?"원시회귀":"메가진화")+'</span>' : '';
 const FORM_SPRITES = {
   palkiaOrigin:"palkia-origin.png",zygardeComplete:"zygarde-complete.gif",
@@ -80,11 +90,12 @@ const spriteMarkup = (item, cls) => {
   const p = BY_ID.get(item.id);
   return '<img class="' + cls + (item.form?" special-form":"") + '" data-pokemon-id="' + item.id + '" data-shiny="' + (item.shiny ? "1" : "0") + '" data-form="' + (item.form||"") + '" src="' + spriteUrl(item) + '" alt="' + (item.shiny ? "이로치 " : "") + itemName(item) + '">';
 };
-const rarityMarkup = tier => '<span class="rarity-label rarity-' + tier + '">' + TIERS[tier].label + '</span>';
+const rarityMarkup = tier => '<span class="rarity-label rarity-' + (tier==="rareUpper"?"rare-upper":tier) + '">' + (tier==="rareUpper"?"희귀(상위권)":TIERS[tier].label) + '</span>';
 const shinyMarkup = shiny => shiny ? '<span class="shiny-badge">✦ 이로치</span>' : '';
 const initialState = () => ({
   money:0,totalCatches:0,misses:0,biome:"sea",equipped:{...STARTER_ROD},
-  ownedRods:[0],bag:[],reserve:[],discovered:[],shinyDiscovered:[],bossWins:[],lostDex:{},lastRaidAttempt:null,lastCatch:null,sound:true
+  ownedRods:[0],bag:[],reserve:[],discovered:[],shinyDiscovered:[],bossWins:[],lostDex:{},lastRaidAttempt:null,lastCatch:null,sound:true,
+  arenaChampionIndex:0,arenaWins:0,arenaLosses:0
 });
 function normalizeItem(value) {
   if (Number.isInteger(value) && BY_ID.has(value)) return {id:value,biome:BY_ID.get(value).biome,shiny:false};
@@ -106,7 +117,7 @@ function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
     if (!saved || typeof saved !== "object") return clean;
-    clean.money = Number.isFinite(saved.money) ? Math.max(0,Math.floor(saved.money)) : 0;
+    clean.money = Number.isFinite(saved.money) ? Math.floor(saved.money) : 0;
     clean.totalCatches = Number.isFinite(saved.totalCatches) ? Math.max(0,Math.floor(saved.totalCatches)) : 0;
     clean.misses = Number.isFinite(saved.misses) ? Math.max(0,Math.floor(saved.misses)) : 0;
     clean.discovered = Array.isArray(saved.discovered) ? [...new Set(saved.discovered.filter(id => BY_ID.has(id)))] : [];
@@ -122,6 +133,9 @@ function loadState() {
       clean.lostDex[biome.id]=Array.isArray(saved.lostDex?.[biome.id])?[...new Set(saved.lostDex[biome.id].filter(id=>valid.has(id)))]:[];
     }
     clean.lastCatch = normalizeItem(saved.lastCatch);
+    clean.arenaChampionIndex = Number.isInteger(saved.arenaChampionIndex) ? Math.max(0,Math.min(9,saved.arenaChampionIndex)) : 0;
+    clean.arenaWins = Number.isInteger(saved.arenaWins) ? Math.max(0,saved.arenaWins) : 0;
+    clean.arenaLosses = Number.isInteger(saved.arenaLosses) ? Math.max(0,saved.arenaLosses) : 0;
     clean.sound = saved.sound !== false;
     const maxUnlocked = unlockedIndexFor(clean.discovered);
     clean.biome = BIOMES.some((b,i) => b.id === saved.biome && i <= maxUnlocked) ? saved.biome : "sea";
@@ -351,7 +365,7 @@ function renderDex() {
     '<div class="dex-biome-note">이로치도 도감 발견으로 인정됩니다. ✦ 표시는 이로치 발견 기록이에요.</div>'+
     '<div class="dex-list">'+all.map(p=>{
       const known=found.has(p.id)&&!lost.has(p.id), shiny=known&&shinies.has(p.id);
-      return '<div class="dex-item'+(known?"":" unknown")+(shiny?" shiny-found":"")+'">'+spriteMarkup({id:p.id,shiny:shiny},"")+'<span><small>No. '+String(p.id).padStart(4,"0")+'</small><strong>'+(known?p.name:"???")+'</strong></span>'+(known?rarityMarkup(p.tier):'<em>미발견</em>')+(shiny?'<b class="shiny-mark">✦</b>':'')+'</div>';
+      return '<div class="dex-item'+(known?"":" unknown")+(shiny?" shiny-found":"")+'">'+spriteMarkup({id:p.id,shiny:shiny},"")+'<span><small>No. '+String(p.id).padStart(4,"0")+'</small><strong>'+(known?p.name:"???")+'</strong></span>'+(known?rarityMarkup(displayTier(p)):'<em>미발견</em>')+(shiny?'<b class="shiny-mark">✦</b>':'')+'</div>';
     }).join("")+'</div>';
 }
 function renderShop() {
@@ -369,7 +383,7 @@ function renderTab() {
     el.classList.toggle("active",active);
     el.setAttribute("aria-selected",String(active));
   });
-  $("tabContent").innerHTML=currentTab==="bag"?renderBag():currentTab==="dex"?renderDex():renderShop();
+  $("tabContent").innerHTML=currentTab==="bag"?renderBag():currentTab==="dex"?renderDex():currentTab==="arena"?renderArenaTab():renderShop();
 }
 const RAID_BOSSES = {
   sea:{legendary:[245,489,788],mythic:382},
