@@ -95,7 +95,7 @@ const shinyMarkup = shiny => shiny ? '<span class="shiny-badge">✦ 이로치</s
 const initialState = () => ({
   money:0,totalCatches:0,misses:0,biome:"sea",equipped:{...STARTER_ROD},
   ownedRods:[0],bag:[],caughtHistory:[],discovered:[],shinyDiscovered:[],bossWins:[],lostDex:{},lastRaidAttempt:null,lastCatch:null,sound:true,
-  arenaChampionIndex:0,arenaWins:0,arenaLosses:0
+  arenaChampionIndex:0,arenaWins:0,arenaLosses:0,arenaLockedTeam:null
 });
 function normalizeItem(value) {
   if (Number.isInteger(value) && BY_ID.has(value)) return {id:value,biome:BY_ID.get(value).biome,shiny:false};
@@ -149,6 +149,7 @@ function loadState() {
     }
     clean.lastCatch = normalizeItem(saved.lastCatch);
     clean.arenaChampionIndex = Number.isInteger(saved.arenaChampionIndex) ? Math.max(0,Math.min(9,saved.arenaChampionIndex)) : 0;
+    clean.arenaLockedTeam = Array.isArray(saved.arenaLockedTeam) ? saved.arenaLockedTeam.slice(0,6) : null;
     clean.arenaWins = Number.isInteger(saved.arenaWins) ? Math.max(0,saved.arenaWins) : 0;
     clean.arenaLosses = Number.isInteger(saved.arenaLosses) ? Math.max(0,saved.arenaLosses) : 0;
     clean.sound = saved.sound !== false;
